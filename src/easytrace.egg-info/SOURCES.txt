@@ -1,0 +1,10 @@
+LICENSE
+README.md
+pyproject.toml
+src/easytrace/__init__.py
+src/easytrace/trace.py
+src/easytrace.egg-info/PKG-INFO
+src/easytrace.egg-info/SOURCES.txt
+src/easytrace.egg-info/dependency_links.txt
+src/easytrace.egg-info/top_level.txt
+tests/test.py

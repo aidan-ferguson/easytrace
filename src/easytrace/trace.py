@@ -15,7 +15,8 @@ LOG_LEVEL_MAP = {
 
 
 class TraceConfig:
-    global_stream : Optional[TextIO] = None
+    stream : Optional[TextIO] = None
+    logging_level : Optional[int] = logging.DEBUG
 
     def set_stream(stream: TextIO) -> None:
         """Set the global stream to log trace events to
@@ -24,7 +25,16 @@ class TraceConfig:
         Args:
             stream (TextIO): Stream to write trace events to
         """        
-        TraceConfig.global_stream = stream
+        TraceConfig.stream = stream
+
+    def set_logging_level(logging_level: int) -> None:
+        """Set the global logging level for the default logger used 
+        this is overridden by the log_level parameter in @trace(...)
+
+        Args:
+            logging_level (int): Enum value for log level to use
+        """      
+        TraceConfig.logging_level = logging_level
 
 
 def trace(func: Optional[Callable] = None, *, 
@@ -32,7 +42,7 @@ def trace(func: Optional[Callable] = None, *,
           exit: Optional[str] = None,
           arg_value: bool = True, 
           return_value: bool = True, 
-          log_level: int = logging.DEBUG,
+          log_level: Optional[int] = None,
           stream: Optional[TextIO] = None) -> Callable:
     """
     Easy tracing utility that logs the entry, exit, and optionally the arguments and return value of a function.
@@ -55,7 +65,7 @@ def trace(func: Optional[Callable] = None, *,
 
             # Handle when a file object is passed for the logging
             handler_added = False
-            stream_final = stream if stream is not None else TraceConfig.global_stream
+            stream_final = stream if stream is not None else TraceConfig.stream
             if stream_final is not None :
                 try:
                     handler = logging.StreamHandler(stream_final)
@@ -63,8 +73,10 @@ def trace(func: Optional[Callable] = None, *,
                     handler_added = True
                 except:
                     pass
-            logger.setLevel(log_level)
-            log = LOG_LEVEL_MAP.get(log_level, logger.debug)
+            if log_level is not None:
+                log = LOG_LEVEL_MAP.get(log_level, TraceConfig.logging_level)
+            else:
+                log = LOG_LEVEL_MAP.get(TraceConfig.logging_level, logging.DEBUG)
 
             # Log on function entry
             if enter is None:
@@ -81,7 +93,7 @@ def trace(func: Optional[Callable] = None, *,
                         arg_str = '(' + ', '.join([f"{name}" for name, _ in bound_args.arguments.items()]) + ')'
                 else:
                     arg_str = ""
-                log(f"call {func.__name__}{arg_str}")
+                log(f"call\t {func.__name__}{arg_str}")
             else:
                 log(enter)
 
@@ -92,11 +104,11 @@ def trace(func: Optional[Callable] = None, *,
             if exit is None:
                 if return_value:
                     try:
-                        log(f"return {func.__name__} -> {type(result).__name__} = {str(result)}")
+                        log(f"return\t {func.__name__} -> {type(result).__name__} = {str(result)}")
                     except:
-                        log(f"return {func.__name__} -> {type(result).__name__}")
+                        log(f"return\t {func.__name__} -> {type(result).__name__}")
                 else:
-                    log(f"return {func.__name__}")
+                    log(f"return\t {func.__name__}")
             else:
                 log(exit)
 
@@ -111,3 +123,4 @@ def trace(func: Optional[Callable] = None, *,
         return decorator
     else:
         return decorator(func)
+    
